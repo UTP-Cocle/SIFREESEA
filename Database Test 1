@@ -1,0 +1,10 @@
+Create Database Cuadrantes;
+
+Use Cuadrantes;
+
+Create Tables Datos
+(
+id_Datos int primary key auto_increment,
+x_Datos decimal(3,2) not null check(x_Datos <= 360.00 and x_Datos >= -360.00),
+y_Datos decimal(3,2) not null check(y_Datos <= 360.00 and y_Datos >= -360.00)
+);
