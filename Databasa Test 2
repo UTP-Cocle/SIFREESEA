@@ -1,0 +1,14 @@
+Create Database Cuadrantes;
+
+Use Cuadrantes;
+
+Create Table Datos
+(
+id_Datos int primary key auto_increment,
+x_Datos float not null,
+y_Datos float not null
+);
+
+/**********************************************************************/
+
+insert into Datos values(null,45,96);
