@@ -1,0 +1,42 @@
+Create Database Cuadrantes;
+
+Use Cuadrantes;
+
+Create Table Datos
+(
+id_Datos int primary key auto_increment,
+x_Datos float not null,
+y_Datos float not null
+);
+
+/**************************************************************************/
+/* P R O C E D U R E D E I N S E R C C I O N
+/**************************************************************************/
+delimiter //
+create procedure Insertar_cuadrantes(x float,y float,out mensaje varchar(100))
+Begin
+declare exit handler for sqlexception
+begin
+set mensaje = 'Los datos no se pudieron agregar';
+rollback;
+end;
+/**************************************************************/
+declare exit handler for sqlwarning
+begin
+set mensaje = 'Los datos no se pudieron agregar';
+rollback;
+end;
+/**************************************************************/
+Start Transaction;
+if((x >= -360 && x <= 360) && (y >= -360 && y <= 360)) then
+insert into Datos values(null,x,y);
+set mensaje = 'Datos Agregado';
+else
+set mensaje = 'No cumple con lo establecido';
+end if;
+Commit;
+End //
+delimiter ;
+/*********************************************************************/
+call Insertar_cuadrantes(-360,360,@mensaje);
+select @mensaje;
