@@ -1,0 +1,15 @@
+<html>
+  <head>
+    <title> Telescopio </title>
+    <link rel="stylesheet" type="text/css" href="estilo/estilos.css" />
+  </head>
+  <body>
+    <div id=contenido>
+      <center><div id=titulo> Posici&oacute;n </div>
+      <br>
+      <div id=formulario>
+        <form action="p2.jsp" method=get>
+            <p> Introduzca el &aacute;ngulo: <input type=text name=g size=8></p>
+            <p><input type=submit value="Enviar"></p>
+      </div></center>
+    </div>
