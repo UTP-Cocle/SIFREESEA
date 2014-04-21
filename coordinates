@@ -1,0 +1,196 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+ 
+import math
+import re
+import logging
+from time import strftime, localtime
+from string import replace
+ 
+# \brief Biblioteca de funciones para la conversión de unidades.
+#
+#  Contiene las funciones necesarias para los cálculos de conversión de unidades más comúnmente usados.
+ 
+## De radianes a horas, con hasta seis decimales de precisión (float).
+# (rads * 180)/(15 * pi)
+#
+# \param rads Radianes.
+# \return Float con el número de horas equivalentes a los radianes recibidos como parámetros.
+def rad_2_hour(rads):
+    h = round( (rads * 180)/(15 * math.pi), 6)
+    if h > 24.0:
+        h = h - 24.0
+    if h < 0.0:
+        h = 24.0 + h
+    return h
+ 
+## De grados en texto a radianes (float).
+# d = DºM'S'' => D+(M/60)+(S/60^2) grados || D.dº
+#
+# \param d Grados en texto (DºM'S'' || D.dº).
+# \return Radianes en float.
+def degStr_2_rad(d):
+    exp1 = re.compile('^-?[0-9]{,3}(º|?)[0-9]{,3}\'[0-9]{,3}([\']{2}|")$')
+    exp2 = re.compile('^-?[0-9]{,3}\.[0-9]{,6}(º|?)$')
+ 
+    if(not exp1.match(d) and not exp2.match(d)):
+        logging.debug("Error parametro: %s" % d)
+        return None
+    elif(exp1.match(d)):
+        d = d.replace('º','.').replace("''",'.').replace("'",'.')
+        d_dic = d.split('.')
+        d_deg = float(d_dic[0])
+        d_min = float(d_dic[1])
+        d_sec = float(d_dic[2])
+ 
+        if(d_deg < 0):
+            d_min = 0 - d_min;
+            d_sec = 0 - d_sec;
+ 
+        d_ndeg = (d_deg+(d_min/60)+(d_sec/(60**2)))
+    else:
+        d_ndeg = float(d.replace('º',''))
+        if(d_ndeg < 0): d_ndeg = 360 - abs(d_ndeg);
+ 
+    return round((d_ndeg * math.pi) / 180, 6)
+ 
+## De grados a grados en texto.
+#
+# \param deg Grados en float.
+# \return Representación de grados en texto (DºM'S'').
+def deg_2_degStr(deg):
+ 
+    neg = False
+    if deg < 0.0:
+        neg = True
+        deg = 0.0 - deg
+ 
+    ndeg = math.floor(float(deg))
+    nmins = (deg - ndeg) * 60
+    mins = math.floor(nmins)
+    secs = round( (nmins - mins) * 60 )
+ 
+    if mins == 60:
+        ndeg += 1
+        mins = 0
+    if secs == 60:
+        mins += 1
+        secs = 0
+ 
+    if neg:
+        ndeg = 0.0 - ndeg
+ 
+    return "%dº%d'%d''" % (ndeg, mins, secs)
+ 
+## De horas en modo texto a radianes    
+# h =  HhMmSs => H+(M/60)+(S/60^2) horas
+# (nhoras * 15 * pi)/180
+#
+# \param h Horas en modo texto (HhMmSSs)
+# \return Radianes en float.
+def hourStr_2_rad(h):
+    exp = re.compile('^[0-9]{,3}h[0-9]{,3}m[0-9]{,3}s$')
+    if(not exp.match(h)):
+        logging.debug("Error parametro: %s" % h)
+        return None
+ 
+    h = h.replace('h','.').replace("m",'.').replace("s",'.')
+    h_dic = h.split('.')
+ 
+    h_h = float(h_dic[0])
+    h_m = float(h_dic[1])
+    h_s = float(h_dic[2])
+ 
+    nh = (h_h+(h_m/60)+(h_s/(60**2)))
+ 
+    return round((nh * 15 * math.pi) / 180, 6)
+ 
+## De número de horas en float a horas en modo texto.
+#
+# \param hours Float con número de horas.
+# \return Representación de horas en modo texto (HhMmSSs)
+def hour_2_hourStr(hours):
+    (h, m, s) = hour_min_sec(hours)
+    return '%dh%dm%00.1fs' % (h, m, s)
+ 
+## De horas a una lista con horas, minutos y segundos.
+#
+# \param hours Número de horas en float.
+# \return Lista con (horas, minutos, segundos)
+def hour_min_sec(hours):
+    h = math.floor(hours)
+ 
+    hours_m = (hours - h)*60.0
+    m = math.floor(hours_m)
+ 
+    s = (hours_m - m)*60.0
+ 
+    #Evitando los .60..
+    if s >= 59.99:
+        s = 0
+        m += 1
+    if m >= 60:
+        m = 60-m
+        h += 1
+ 
+    return (h, m, s)
+ 
+## De grados en float a lista con grados, minutos y segundos.
+#
+# \param degs Grados en float.
+# \return Lista con (grados, minutos, segundos)
+def grad_min_sec(degs):
+    #Evitando operaciones con valores negativos..
+    to_neg = False
+    if degs < 0:
+        degs = math.fabs(degs)
+        to_neg = True
+ 
+    d = math.floor(degs)
+ 
+    degs_m = (degs - d)*60.0
+    m = math.floor(degs_m)
+ 
+    s = (degs_m - m)*60.0
+ 
+    #Evitando el .60..
+    if s >= 59.99:
+        s = 0
+        m += 1
+    if m >= 60.0:
+        m = 60.0-m
+        d += 1
+ 
+    if to_neg:
+        d = -d;
+ 
+    return (d, m, s)
+ 
+## Transforma los valores obtenidos desde el "Stellarium Telescope Protocol" a una lista con una representación
+#  en texto de cada una de los parámetros.
+#
+# \param ra Ascensión recta.
+# \param dec Declinación.
+# \param mtime Timestamp con el número de milisegundos.
+# \return Lista con representación en texto de (Ascensión recta, declinación, hora) => (HhMmSSs, DºM'S'', HhMmSs)
+def eCoords2str(ra, dec, mtime):
+    ra_h = ra*12.0/2147483648 #Este es el valor para convertir a radianes para las ecuaciones de conversión de coordenadas
+    dec_d = dec*90.0/1073741824 #Este es el otro valor para las ecuaciones, pero en radianes
+    time_s = math.floor(mtime / 1000000) #de microsegundos a segundos (Timestamp estárdar de Unix)
+ 
+    return ('%dh%dm%00.0fs' % hour_min_sec(ra_h), '%dº%d\'%00.0f\'\'' % grad_min_sec(dec_d), strftime("%Hh%Mm%Ss", localtime(time_s)))
+ 
+## De coordenadas en radianes al formato para el "Stellarium Telescope Protocol".
+#
+# \param ra Ascension recta (float).
+# \param dec Declinación (float).
+# \return Lista con (Ascensión recta, Declinación) en el formato para el "Stellarium Telescope Protocol".
+def rad_2_stellarium_protocol(ra, dec):
+ 
+    ra_h = rad_2_hour(ra)
+ 
+    dec_d = (dec * 180) / math.pi
+ 
+    logging.debug("(horas, grados): (%f, %f) -> (%s, %s)" % (ra_h, dec_d, hour_2_hourStr(ra_h), deg_2_degStr(dec_d)))
+ 
+    return (int(ra_h*(2147483648/12.0)), int(dec_d*(1073741824/90.0)))
